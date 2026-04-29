@@ -16,7 +16,6 @@ app.use(express.json());
 app.use('/api/users', usersRouter);
 app.use('/api/recipes', recipesRouter);
 app.use('/api/categories', categoriesRouter);
-app.use('/recipes', recipesRouter);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
