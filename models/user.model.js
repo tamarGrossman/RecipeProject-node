@@ -23,4 +23,20 @@ const validateUser = (user) => {
     return schema.validate(user);
 };
 
-module.exports = { User, validateUser };
+const validateLogin = (credentials) => {
+    const schema = Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().required()
+    });
+    return schema.validate(credentials);
+};
+
+const validatePasswordUpdate = (payload) => {
+    const schema = Joi.object({
+        password: Joi.string().min(6).required().regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/)
+            .messages({ 'string.pattern.base': 'הסיסמה חייבת להכיל אות גדולה, אות קטנה ומספר' })
+    });
+    return schema.validate(payload);
+};
+
+module.exports = { User, validateUser, validateLogin, validatePasswordUpdate };
