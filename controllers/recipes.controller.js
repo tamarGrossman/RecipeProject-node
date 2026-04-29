@@ -22,6 +22,45 @@ const parsePositiveInt = (value, fallback) => {
   return n;
 };
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const generateCategoryCode = async (name) => {
+  const base = String(name)
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'CATEGORY';
+
+  let candidate = base;
+  let suffix = 1;
+  while (await Category.exists({ code: candidate })) {
+    suffix += 1;
+    candidate = `${base}_${suffix}`;
+  }
+
+  return candidate;
+};
+
+const getOrCreateCategoryByName = async (categoryName) => {
+  const normalizedName = String(categoryName || '').trim();
+  if (!normalizedName) {
+    return null;
+  }
+
+  const byNameRegex = new RegExp(`^${escapeRegex(normalizedName)}$`, 'i');
+  let category = await Category.findOne({ description: byNameRegex });
+  if (category) {
+    return category;
+  }
+
+  const code = await generateCategoryCode(normalizedName);
+  category = await Category.create({
+    code,
+    description: normalizedName
+  });
+  return category;
+};
+
 const getRecipes = async (req, res, next) => {
   try {
     const accessFilter = buildAccessFilter(req);
@@ -120,19 +159,33 @@ const addRecipe = async (req, res, next) => {
       return res.status(400).json({ error: { message: error.details[0].message } });
     }
 
-    const categoryExists = await Category.exists({ _id: req.body.category });
+    let categoryId = req.body.category;
+    if (!categoryId && req.body.categoryName) {
+      const category = await getOrCreateCategoryByName(req.body.categoryName);
+      if (!category) {
+        return res.status(400).json({ error: { message: 'categoryName is required when category is missing.' } });
+      }
+      categoryId = category._id;
+    }
+
+    if (!categoryId) {
+      return res.status(400).json({ error: { message: 'category or categoryName is required.' } });
+    }
+
+    const categoryExists = await Category.exists({ _id: categoryId });
     if (!categoryExists) {
       return res.status(404).json({ error: { message: 'Category not found.' } });
     }
 
     const created = await Recipe.create({
       ...req.body,
+      category: categoryId,
       owner: req.user._id
     });
 
     // Keep category counters in sync (best-effort).
     await Category.findByIdAndUpdate(
-      req.body.category,
+      categoryId,
       { $inc: { recipesCount: 1 }, $push: { recipes: created._id } },
       { new: true }
     );
@@ -220,11 +273,15 @@ const deleteRecipe = async (req, res, next) => {
     const deleted = await Recipe.findByIdAndDelete(id);
 
     if (deleted?.category) {
-      await Category.findByIdAndUpdate(
+      const updatedCategory = await Category.findByIdAndUpdate(
         deleted.category,
         { $inc: { recipesCount: -1 }, $pull: { recipes: deleted._id } },
         { new: true }
       );
+
+      if (updatedCategory && updatedCategory.recipesCount <= 0) {
+        await Category.findByIdAndDelete(updatedCategory._id);
+      }
     }
 
     return res.status(200).json({ message: 'Recipe deleted successfully.' });

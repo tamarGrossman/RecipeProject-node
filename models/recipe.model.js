@@ -26,7 +26,8 @@ const validateRecipe = (recipe) => {
     const schema = Joi.object({
         name: Joi.string().min(2).required(),
         description: Joi.string().allow(''),
-        category: Joi.string().hex().length(24).required(),
+        category: Joi.string().hex().length(24),
+        categoryName: Joi.string().min(1),
         preparationTime: Joi.number().min(1).required(),
         difficulty: Joi.number().min(1).max(5).required(),
         layers: Joi.array().items(Joi.object({
@@ -37,7 +38,7 @@ const validateRecipe = (recipe) => {
         image: Joi.string().allow(''),
         isPrivate: Joi.boolean()
         // ה-owner בדרך כלל יגיע מהטוקן בשרת, לא מה-body
-    });
+    }).or('category', 'categoryName');
     return schema.validate(recipe);
 };
 
