@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const usersRouter = require('./routes/users.routes');
+const recipesRouter = require('./routes/recipes.routes');
 const notFoundMiddleware = require('./middlewares/not-found.middleware');
 const errorMiddleware = require('./middlewares/error.middleware');
 
@@ -12,6 +13,8 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use('/api/users', usersRouter);
+app.use('/api/recipes', recipesRouter);
+app.use('/recipes', recipesRouter);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
