@@ -3,12 +3,18 @@ const mongoose = require('mongoose');
 const { Recipe, validateRecipe } = require('../models/recipe.model');
 const { Category } = require('../models/category.model');
 
-const buildAccessFilter = (req) => ({
-  $or: [
-    { isPrivate: false },
-    { owner: req.user._id }
-  ]
-});
+const buildAccessFilter = (req) => {
+  if (!req.user?._id) {
+    return { isPrivate: false };
+  }
+
+  return {
+    $or: [
+      { isPrivate: false },
+      { owner: req.user._id }
+    ]
+  };
+};
 
 const parsePositiveInt = (value, fallback) => {
   const n = Number(value);

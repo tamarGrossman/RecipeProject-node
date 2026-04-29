@@ -12,7 +12,7 @@ const getCategories = async (req, res, next) => {
 };
 
 const filterVisibleRecipes = (recipes, userId) =>
-  recipes.filter((recipe) => !recipe.isPrivate || recipe.owner?.toString() === userId?.toString());
+  recipes.filter((recipe) => !recipe.isPrivate || (userId && recipe.owner?.toString() === userId?.toString()));
 
 const getCategoriesWithRecipes = async (req, res, next) => {
   try {
